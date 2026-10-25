@@ -1,0 +1,625 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="What planet Earth looks like from space: a rotating globe, five viewing distances, what each color means, and key facts. Made by AJ.">
+<title>What Earth Looks Like</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;700&family=IBM+Plex+Mono:wght@400;500&family=Instrument+Serif:ital@0;1&display=swap">
+<style>
+/* Layout: one long page over a fixed starfield. A lit globe sits beside the title, then rows ordered by distance from Earth, then colours, then numbers. */
+:root {
+  color-scheme: dark;
+  --void: #03060c;
+  --ink: #e9eff7;
+  --dim: #93a4ba;
+  --line: rgba(147, 164, 186, 0.24);
+  --limb: #6db6ff;
+  --sun: #ffc27a;
+  --ocean: #0f4c8a;
+  --land: #7a9444;
+  --f-display: "Instrument Serif", "Iowan Old Style", Georgia, serif;
+  --f-body: "Hanken Grotesk", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+
+*, *::before, *::after { box-sizing: border-box; }
+
+body {
+  background: var(--void);
+  color: var(--ink);
+  font: 400 1.0625rem/1.6 var(--f-body);
+  padding-block: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  overflow-x: hidden;
+}
+
+.sky { position: fixed; inset: 0; z-index: 0; pointer-events: none; }
+.sky canvas { display: block; width: 100%; height: 100%; }
+
+.page { position: relative; z-index: 1; max-width: 1120px; margin: 0 auto; }
+
+h1, h2, h3, p, dl, dd, figure { margin: 0; }
+
+a, button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--limb); outline-offset: 3px; }
+
+/* ---------- hero ---------- */
+.hero {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 24px;
+  align-items: center;
+  padding-block: 28px 40px;
+}
+.globe-col { order: -1; min-width: 0; }
+.hero-text { min-width: 0; }
+
+.eyebrow {
+  font: 500 0.75rem/1.4 var(--f-mono);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--limb);
+  margin-bottom: 18px;
+}
+
+h1 { font-family: var(--f-display); font-weight: 400; line-height: 0.92; text-wrap: balance; }
+h1 .lead { display: block; font-size: clamp(1.5rem, 4vw, 2.2rem); color: var(--dim); line-height: 1.2; }
+h1 em {
+  display: block;
+  font-style: italic;
+  font-size: clamp(5.2rem, 17vw, 10.5rem);
+  letter-spacing: -0.025em;
+  color: var(--ink);
+  text-shadow: 0 0 70px rgba(109, 182, 255, 0.35);
+  margin-block: 2px 6px;
+}
+
+.intro { max-width: 52ch; margin-top: 20px; font-size: 1.1875rem; color: var(--ink); }
+
+.readout {
+  display: flex; flex-wrap: wrap; gap: 20px 36px;
+  margin-top: 30px; padding-top: 20px;
+  border-top: 1px solid var(--line);
+}
+.readout div { min-width: 0; }
+.readout dt { font: 500 0.6875rem/1.4 var(--f-mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
+.readout dd { font: 400 1.75rem/1.2 var(--f-display); margin-top: 4px; font-variant-numeric: tabular-nums; }
+.readout dd small { font: 400 0.8125rem var(--f-mono); color: var(--dim); }
+
+.controls { display: flex; flex-wrap: wrap; align-items: center; gap: 14px 18px; margin-top: 26px; }
+.btn {
+  min-height: 44px; padding: 0 18px;
+  background: transparent; color: var(--ink);
+  border: 1px solid var(--line);
+  font: 500 0.75rem/1 var(--f-mono); letter-spacing: 0.12em; text-transform: uppercase;
+  transition: border-color 0.2s, color 0.2s;
+}
+.btn:hover { border-color: var(--limb); color: var(--limb); }
+.hint { font: 400 0.8125rem/1.4 var(--f-mono); color: var(--dim); }
+
+/* globe */
+.globe-wrap { position: relative; width: min(100%, 560px); aspect-ratio: 1; max-width: 100%; margin: 0 auto; }
+.globe-wrap::before {
+  content: ""; position: absolute; inset: 5.4%; border-radius: 50%;
+  background: radial-gradient(circle at 34% 32%, #1c5088 0%, #082444 62%, #03101f 100%);
+  box-shadow: 0 0 60px rgba(109, 182, 255, 0.25);
+}
+#globe {
+  position: absolute; inset: 0; width: 100%; height: 100%;
+  opacity: 0; transition: opacity 0.8s ease;
+  cursor: grab; touch-action: pan-y; border-radius: 50%;
+}
+#globe.on { opacity: 1; }
+#globe:active { cursor: grabbing; }
+
+/* ---------- sections ---------- */
+section { padding-block: 56px 8px; }
+.kicker { font: 500 0.75rem/1.4 var(--f-mono); letter-spacing: 0.16em; text-transform: uppercase; color: var(--limb); }
+h2 { font-family: var(--f-display); font-weight: 400; font-size: clamp(2.2rem, 6vw, 3.6rem); line-height: 1.02; margin-top: 12px; text-wrap: balance; max-width: 18ch; }
+.sec-intro { max-width: 58ch; margin-top: 16px; color: var(--dim); }
+
+.vantage { margin-top: 34px; border-bottom: 1px solid var(--line); }
+.row {
+  display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px 40px;
+  padding-block: 26px; border-top: 1px solid var(--line);
+}
+.dist { font: 500 clamp(1.5rem, 4vw, 2.1rem)/1.1 var(--f-mono); color: var(--sun); font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+.dist small { display: block; margin-top: 6px; font: 400 0.75rem/1.3 var(--f-mono); letter-spacing: 0.12em; text-transform: uppercase; color: var(--dim); }
+.row h3 { font: 400 clamp(1.6rem, 3.4vw, 2rem)/1.15 var(--f-display); }
+.row p { margin-top: 8px; max-width: 62ch; color: #cdd8e6; }
+
+/* colours */
+.surface { margin-top: 34px; max-width: 760px; }
+.bar { display: flex; height: 16px; background: var(--line); }
+.bar i { display: block; height: 100%; }
+.bar .o { width: 71%; background: var(--ocean); }
+.bar .l { width: 29%; background: var(--land); }
+.bar-labels { display: flex; justify-content: space-between; gap: 12px; margin-top: 10px; font: 400 0.8125rem/1.4 var(--f-mono); color: var(--dim); }
+.bar-labels b { color: var(--ink); font-weight: 500; }
+
+.keys { display: grid; grid-template-columns: minmax(0, 1fr); gap: 26px 48px; margin-top: 36px; }
+.key { display: grid; grid-template-columns: 18px minmax(0, 1fr); gap: 4px 16px; align-items: start; }
+.sw { width: 18px; height: 18px; border-radius: 50%; margin-top: 4px; border: 1px solid rgba(255, 255, 255, 0.18); }
+.key h3 { font: 700 1rem/1.4 var(--f-body); }
+.key p { grid-column: 2; color: var(--dim); max-width: 46ch; }
+
+/* atmosphere */
+.thin { display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px 40px; align-items: center; margin-top: 56px; padding-block: 34px; border-block: 1px solid var(--line); }
+.thin .big { font: italic 400 clamp(4.5rem, 14vw, 8rem)/0.9 var(--f-display); color: var(--limb); }
+.thin h3 { font: 400 clamp(1.5rem, 3vw, 1.9rem)/1.2 var(--f-display); }
+.thin p { margin-top: 8px; max-width: 56ch; color: #cdd8e6; }
+
+/* numbers */
+.facts { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0 56px; margin-top: 30px; }
+.fact { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 2px 16px; padding-block: 14px; border-bottom: 1px solid var(--line); }
+.fact dt { color: var(--dim); }
+.fact dd { font: 500 0.9375rem/1.4 var(--f-mono); text-align: right; font-variant-numeric: tabular-nums; }
+
+/* footer */
+footer { margin-top: 72px; padding-block: 30px 44px; border-top: 1px solid var(--line); display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 12px 32px; }
+.made { font: 400 1.75rem/1 var(--f-display); }
+.made em { color: var(--limb); }
+.note { max-width: 52ch; font: 400 0.8125rem/1.5 var(--f-mono); color: var(--dim); }
+
+@media (min-width: 640px) {
+  .row { grid-template-columns: minmax(0, 13rem) minmax(0, 1fr); align-items: start; }
+  .keys { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .thin { grid-template-columns: auto minmax(0, 1fr); }
+}
+@media (min-width: 880px) {
+  .hero { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 40px; padding-block: 56px 56px; }
+  .globe-col { order: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  #globe { transition: none; }
+  .btn { transition: none; }
+}
+</style>
+<style>html{background:#03060c}body{margin:0}</style>
+</head>
+<body>
+
+
+<div class="sky" aria-hidden="true"><canvas id="stars"></canvas></div>
+
+<div class="page">
+  <header class="hero">
+    <div class="hero-text">
+      <p class="eyebrow">Third planet from the Sun</p>
+      <h1><span class="lead">What planet</span><em>Earth</em><span class="lead">looks like</span></h1>
+      <p class="intro">From space, Earth looks like a blue and white ball with brown and green patches. A thin glowing edge of air wraps around it. About seven tenths of the surface is ocean, and clouds cover roughly two thirds of the planet at any moment.</p>
+
+      <dl class="readout">
+        <div><dt>Diameter</dt><dd>12,742 <small>km</small></dd></div>
+        <div><dt>One day</dt><dd>23 h 56 <small>min</small></dd></div>
+        <div><dt>One year</dt><dd>365.25 <small>days</small></dd></div>
+      </dl>
+
+      <div class="controls">
+        <button class="btn" id="spin" type="button">Pause rotation</button>
+        <span class="hint">Drag the globe to turn it</span>
+      </div>
+    </div>
+
+    <div class="globe-col">
+      <div class="globe-wrap">
+        <canvas id="globe" width="560" height="560" tabindex="0" role="img" aria-label="A rotating illustration of Earth lit from the left, with blue oceans, white clouds, green and tan land, and city lights on the night side. Drag or use the left and right arrow keys to turn it."></canvas>
+      </div>
+    </div>
+  </header>
+
+  <section id="distances">
+    <p class="kicker">Five distances</p>
+    <h2>The view changes as you move away</h2>
+    <p class="sec-intro">Earth never looks the same twice. Here is what it looks like from five real places, nearest first.</p>
+
+    <div class="vantage">
+      <div class="row">
+        <p class="dist">400 km<small>Space station</small></p>
+        <div>
+          <h3>A curved horizon and a thin blue line</h3>
+          <p>Earth fills the window and the horizon bends. A narrow blue and white band hugs the edge. That band is the whole atmosphere seen sideways. The station circles the planet about every 90 minutes, so the view switches between day and night roughly every 45 minutes.</p>
+        </div>
+      </div>
+      <div class="row">
+        <p class="dist">35,786 km<small>Geostationary orbit</small></p>
+        <div>
+          <h3>One half of the planet, held still</h3>
+          <p>A whole hemisphere sits in view as a round disc. Satellites at this height circle at the same rate Earth turns, so they stay above one spot. Weather satellites live here and watch clouds spiral across the same half of the planet all day.</p>
+        </div>
+      </div>
+      <div class="row">
+        <p class="dist">384,400 km<small>The Moon</small></p>
+        <div>
+          <h3>A blue disc with phases</h3>
+          <p>Earth looks about four times wider than the Moon looks from here. It hangs in nearly the same spot in the lunar sky and goes through phases like a moon of its own. The Apollo 8 crew saw the first Earthrise in December 1968.</p>
+        </div>
+      </div>
+      <div class="row">
+        <p class="dist">1.5 million km<small>Sun-Earth L1</small></p>
+        <div>
+          <h3>The full sunlit face</h3>
+          <p>A satellite parked on the sunward side sees the lit half of Earth head on, like a full moon. As the day passes, the continents slide across the disc one after another.</p>
+        </div>
+      </div>
+      <div class="row">
+        <p class="dist">6 billion km<small>Voyager 1, 1990</small></p>
+        <div>
+          <h3>Less than one pixel</h3>
+          <p>Seen from the edge of the planets, Earth is a faint blue speck inside a band of scattered sunlight. The picture is known as the Pale Blue Dot. Everything described on this page fits inside that single point.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="colors">
+    <p class="kicker">Reading the colors</p>
+    <h2>What each color is</h2>
+
+    <div class="surface">
+      <div class="bar" role="img" aria-label="Surface split: about 71 percent ocean, 29 percent land"><i class="o"></i><i class="l"></i></div>
+      <p class="bar-labels"><span><b>71%</b> ocean</span><span><b>29%</b> land</span></p>
+    </div>
+
+    <div class="keys">
+      <div class="key">
+        <span class="sw" style="background:#0e4a86"></span>
+        <h3>Deep blue</h3>
+        <p>Open ocean. Water absorbs red light and scatters blue, so deep water looks dark blue and shallow water near coasts looks lighter.</p>
+      </div>
+      <div class="key">
+        <span class="sw" style="background:#eef3f8"></span>
+        <h3>White</h3>
+        <p>Clouds and ice. The polar caps and the Greenland ice sheet stay white all year, while clouds drift and swirl.</p>
+      </div>
+      <div class="key">
+        <span class="sw" style="background:#6f8f3f"></span>
+        <h3>Green, brown and tan</h3>
+        <p>Land. Forests and grassland look green. Deserts such as the Sahara and inland Australia look tan or orange.</p>
+      </div>
+      <div class="key">
+        <span class="sw" style="background:#05080f"></span>
+        <h3>Black with gold dots</h3>
+        <p>The night side. City lights glow in clusters along coasts and rivers. The big dark gaps are oceans, deserts and ice.</p>
+      </div>
+    </div>
+
+    <div class="thin">
+      <p class="big">99%</p>
+      <div>
+        <h3>The glowing edge is very thin</h3>
+        <p>About 99% of the air sits in the lowest 30 km, while the planet is 6,371 km from surface to center. On a basketball, the atmosphere would be about half a millimetre thick.</p>
+      </div>
+    </div>
+  </section>
+
+  <section id="numbers">
+    <p class="kicker">By the numbers</p>
+    <h2>Size, age and speed</h2>
+    <dl class="facts">
+      <div class="fact"><dt>Circumference at the equator</dt><dd>40,075 km</dd></div>
+      <div class="fact"><dt>Age</dt><dd>4.54 billion years</dd></div>
+      <div class="fact"><dt>Axial tilt</dt><dd>23.4°</dd></div>
+      <div class="fact"><dt>Speed around the Sun</dt><dd>29.8 km/s</dd></div>
+      <div class="fact"><dt>Highest point, Mount Everest</dt><dd>8,849 m</dd></div>
+      <div class="fact"><dt>Deepest point, Challenger Deep</dt><dd>about 10,900 m</dd></div>
+      <div class="fact"><dt>Average surface temperature</dt><dd>about 15 °C</dd></div>
+      <div class="fact"><dt>Natural moons</dt><dd>1</dd></div>
+    </dl>
+  </section>
+
+  <footer>
+    <p class="made">Made by <em>AJ</em></p>
+    <p class="note">The globe is drawn live in your browser from simplified outlines. It is an illustration, so coastlines are approximate and the city lights are random.</p>
+  </footer>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  var reduce = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  /* ---------- starfield ---------- */
+  (function () {
+    var c = document.getElementById('stars');
+    if (!c || !c.getContext) return;
+    var ctx = c.getContext('2d');
+    function draw() {
+      var dpr = Math.min(window.devicePixelRatio || 1, 2);
+      var w = window.innerWidth, h = window.innerHeight;
+      c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      var n = Math.floor(w * h / 4200), seed = 7;
+      function rnd() { seed = (seed * 16807) % 2147483647; return (seed - 1) / 2147483646; }
+      for (var i = 0; i < n; i++) {
+        var x = rnd() * w, y = rnd() * h, r = rnd(), t = rnd();
+        var s = r > 0.97 ? 1.6 : (r > 0.8 ? 1.1 : 0.7);
+        var a = (0.25 + rnd() * 0.65).toFixed(2);
+        ctx.fillStyle = t > 0.9 ? 'rgba(255,214,160,' + a + ')' : (t > 0.78 ? 'rgba(160,200,255,' + a + ')' : 'rgba(235,242,255,' + a + ')');
+        ctx.fillRect(x, y, s, s);
+      }
+    }
+    draw();
+    var to;
+    window.addEventListener('resize', function () { clearTimeout(to); to = setTimeout(draw, 150); });
+  })();
+
+  /* ---------- globe ---------- */
+  var cv = document.getElementById('globe');
+  var btn = document.getElementById('spin');
+  if (!cv || !cv.getContext) return;
+  var ctx = cv.getContext('2d');
+
+  var TW = 640, TH = 320;
+  var PI = Math.PI, TAU = Math.PI * 2, DEG = 180 / Math.PI;
+
+  /* simplified continent outlines, [longitude, latitude] */
+  var LAND = [
+    [[-168,66],[-156,71],[-140,70],[-125,70],[-110,72],[-95,72],[-85,70],[-82,67],[-90,64],[-94,59],[-92,57],[-85,55],[-82,53],[-79,52],[-78,57],[-77,62],[-72,62],[-65,60],[-61,56],[-56,52],[-60,47],[-66,44],[-70,42],[-74,40],[-76,35],[-81,31],[-80,26],[-82,26],[-84,30],[-90,30],[-97,27],[-97,22],[-95,18],[-91,19],[-87,21],[-88,16],[-84,15],[-83,10],[-79,9],[-77,8],[-80,7],[-84,9],[-87,13],[-92,15],[-98,16],[-105,20],[-106,23],[-112,29],[-114,31],[-117,32],[-121,35],[-124,40],[-124,47],[-127,51],[-133,56],[-140,60],[-148,61],[-152,59],[-158,57],[-163,55],[-165,60]],
+    [[-73,78],[-60,82],[-30,83.5],[-18,78],[-20,70],[-30,68],[-42,60],[-50,62],[-55,68],[-58,75]],
+    [[-80,73],[-68,70],[-62,66],[-65,62],[-72,64],[-78,65],[-90,72]],
+    [[-125,72],[-100,73],[-100,69],[-118,70]],
+    [[-77,8],[-72,12],[-62,10],[-52,5],[-50,0],[-45,-3],[-35,-6],[-39,-14],[-41,-22],[-48,-26],[-53,-34],[-58,-38],[-65,-41],[-66,-47],[-69,-52],[-72,-54],[-75,-48],[-73,-40],[-71,-30],[-70,-18],[-76,-14],[-81,-5],[-80,0]],
+    [[-17,21],[-10,30],[-6,36],[10,37],[20,32],[32,31],[34,28],[37,20],[39,15],[43,12],[51,12],[48,5],[40,-3],[40,-15],[35,-24],[32,-29],[25,-34],[18,-34],[12,-18],[13,-8],[9,-1],[9,4],[0,5],[-8,4],[-13,8],[-17,14]],
+    [[44,-25],[47,-25],[50,-15],[49,-12],[44,-17]],
+    [[-9,43],[-1,46],[-4,48],[2,51],[5,53],[8,54],[8,57],[5,59],[5,62],[11,65],[15,68],[20,70],[28,71],[34,69],[41,67],[44,68],[55,68],[60,69],[68,69],[70,73],[80,73],[88,75],[100,77],[112,74],[125,73],[140,72],[160,70],[170,70],[180,69],[180,65],[177,62],[170,60],[163,59],[160,54],[156,51],[155,57],[150,59],[143,59],[137,54],[140,48],[135,43],[130,42],[129,37],[127,35],[126,37],[125,40],[121,40],[118,38],[122,37],[120,32],[122,30],[120,25],[114,22],[110,21],[108,16],[109,12],[105,9],[104,10],[101,13],[100,8],[103,2],[101,3],[98,8],[98,14],[95,16],[94,19],[91,22],[88,22],[86,20],[80,15],[80,10],[77,8],[73,16],[72,21],[69,23],[67,25],[62,25],[57,26],[56,27],[52,28],[50,30],[48,29],[50,26],[52,24],[56,25],[57,23],[59,22],[55,17],[52,16],[44,13],[43,13],[39,21],[35,28],[35,31],[36,36],[30,36],[27,37],[26,40],[23,40],[24,38],[22,36.5],[21,38],[19,41],[17,42],[13,45],[12,44],[16,41],[18,40],[16,38],[15,40],[12,42],[9,44],[4,43],[3,42],[0,39],[-2,37],[-5,36],[-9,37]],
+    [[-5,50],[-3,58],[-6,58],[-5,55],[-3,54],[0,53],[2,52],[1,51]],
+    [[-10,52],[-6,52],[-6,55],[-10,54.5]],
+    [[-24,65],[-14,66],[-14,64],[-22,63.5]],
+    [[130,31],[131,34],[136,36],[140,41],[142,45],[144,43],[141,39],[140,35],[135,33]],
+    [[114,-22],[122,-18],[130,-12],[137,-12],[142,-11],[146,-19],[153,-27],[150,-37],[141,-38],[135,-34],[130,-32],[115,-34]],
+    [[173,-35],[178,-38],[175,-41]],
+    [[172,-41],[174,-42],[171,-45],[167,-46]],
+    [[95,5],[98,4],[104,-2],[106,-6],[102,-4],[96,2]],
+    [[106,-6],[114,-8],[106,-7]],
+    [[109,1],[111,2],[117,7],[119,5],[117,1],[116,-4],[111,-3]],
+    [[131,-1],[141,-2],[150,-10],[142,-9],[138,-8],[132,-3]],
+    [[120,18],[122,18],[124,12],[126,7],[122,7],[120,14]],
+    [[-85,22],[-78,22],[-74,20],[-78,20]],
+    [[-180,-72],[180,-72],[180,-90],[-180,-90]]
+  ];
+
+  /* noise */
+  function hash3(x, y, z) {
+    var h = Math.imul(x, 374761393) ^ Math.imul(y, 668265263) ^ Math.imul(z, 1274126177);
+    h = Math.imul(h ^ (h >>> 13), 1274126177);
+    h ^= h >>> 16;
+    return (h >>> 0) / 4294967296;
+  }
+  function sm(t) { return t * t * (3 - 2 * t); }
+  function noise3(x, y, z) {
+    var xi = Math.floor(x), yi = Math.floor(y), zi = Math.floor(z);
+    var xf = sm(x - xi), yf = sm(y - yi), zf = sm(z - zi);
+    var a = hash3(xi, yi, zi), b = hash3(xi + 1, yi, zi), c = hash3(xi, yi + 1, zi), d = hash3(xi + 1, yi + 1, zi);
+    var e = hash3(xi, yi, zi + 1), f = hash3(xi + 1, yi, zi + 1), g = hash3(xi, yi + 1, zi + 1), h = hash3(xi + 1, yi + 1, zi + 1);
+    var x0 = a + (b - a) * xf, x1 = c + (d - c) * xf, x2 = e + (f - e) * xf, x3 = g + (h - g) * xf;
+    var y0 = x0 + (x1 - x0) * yf, y1 = x2 + (x3 - x2) * yf;
+    return y0 + (y1 - y0) * zf;
+  }
+  function fbm(x, y, z, o) {
+    var s = 0, a = 0.5, f = 1, n = 0;
+    for (var i = 0; i < o; i++) { s += a * noise3(x * f, y * f, z * f); n += a; a *= 0.5; f *= 2.03; }
+    return s / n;
+  }
+  function clamp(v, a, b) { return v < a ? a : (v > b ? b : v); }
+  function sstep(a, b, v) { var t = clamp((v - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); }
+  function mix(a, b, t) { return a + (b - a) * t; }
+
+  function blur(src, w, h, r) {
+    var t = new Float32Array(src.length), o = new Float32Array(src.length), k = 2 * r + 1, x, y, j, s, yy;
+    for (y = 0; y < h; y++) for (x = 0; x < w; x++) {
+      s = 0; for (j = -r; j <= r; j++) s += src[y * w + ((x + j + w) % w)];
+      t[y * w + x] = s / k;
+    }
+    for (x = 0; x < w; x++) for (y = 0; y < h; y++) {
+      s = 0; for (j = -r; j <= r; j++) { yy = y + j; yy = yy < 0 ? 0 : (yy >= h ? h - 1 : yy); s += t[yy * w + x]; }
+      o[y * w + x] = s / k;
+    }
+    return o;
+  }
+
+  /* textures, filled in chunks so the page stays responsive */
+  var rgb = new Uint8Array(TW * TH * 3), isOcean = new Uint8Array(TW * TH), lights = new Uint8Array(TW * TH), cloud = new Uint8Array(TW * TH);
+  var ready = false;
+
+  function buildTextures(done) {
+    var cn = document.createElement('canvas'); cn.width = TW; cn.height = TH;
+    var g = cn.getContext('2d');
+    g.fillStyle = '#000'; g.fillRect(0, 0, TW, TH);
+    g.fillStyle = '#fff';
+    LAND.forEach(function (p) {
+      g.beginPath();
+      p.forEach(function (q, i) {
+        var x = (q[0] + 180) / 360 * TW, y = (90 - q[1]) / 180 * TH;
+        if (i) g.lineTo(x, y); else g.moveTo(x, y);
+      });
+      g.closePath(); g.fill();
+    });
+    var d = g.getImageData(0, 0, TW, TH).data, m = new Float32Array(TW * TH), i;
+    for (i = 0; i < m.length; i++) m[i] = d[i * 4] / 255;
+    var bm = blur(m, TW, TH, 4);
+
+    var j0 = 0;
+    function step() {
+      var end = Math.min(j0 + 20, TH);
+      for (var j = j0; j < end; j++) {
+        var lat = PI / 2 - (j + 0.5) / TH * PI, cl = Math.cos(lat), sl = Math.sin(lat), latd = lat * DEG, a = Math.abs(latd);
+        for (var i2 = 0; i2 < TW; i2++) {
+          var lon = (i2 + 0.5) / TW * TAU - PI, lond = lon * DEG;
+          var px = cl * Math.cos(lon), py = sl, pz = cl * Math.sin(lon);
+          var k = j * TW + i2, r, gg, b;
+          var coastN = fbm(px * 7 + 20, py * 7, pz * 7, 3);
+          var v = bm[k] + (coastN - 0.5) * 0.8;
+          var ice = 0, des = 0;
+          if (v > 0.5) {
+            var n1 = fbm(px * 5, py * 5 + 4, pz * 5, 3), n2 = fbm(px * 2.4 + 9, py * 2.4, pz * 2.4 - 5, 2);
+            var dz = Math.exp(-Math.pow((a - 25) / 9, 2));
+            des = sstep(0.6, 0.8, dz * (n2 * 1.8 - 0.25));
+            var sh = 0.85 + 0.3 * n1;
+            r = (40 + n1 * 50); gg = (88 + n1 * 60); b = (36 + n1 * 30);
+            r = mix(r, 205 * sh, des); gg = mix(gg, 160 * sh, des); b = mix(b, 98 * sh, des);
+            var tu = sstep(52, 64, a);
+            r = mix(r, 100, tu * 0.7); gg = mix(gg, 112, tu * 0.7); b = mix(b, 94, tu * 0.7);
+            ice = (a > 66 || (latd > 58 && lond > -75 && lond < -12)) ? 1 : 0;
+            if (ice) { r = 238; gg = 244; b = 250; }
+            isOcean[k] = 0;
+            if (!ice && a < 64) {
+              var v1 = fbm(px * 10 + 3, py * 10, pz * 10, 2), v2 = noise3(px * 55, py * 55, pz * 55);
+              lights[k] = Math.round(255 * sstep(0.5, 0.6, v1) * sstep(0.6, 0.74, v2) * (1 - des * 0.85));
+            }
+          } else {
+            var c = sstep(0.02, 0.4, bm[k]);
+            var n3 = fbm(px * 4, py * 4 + 7, pz * 4, 2), br = 0.9 + 0.2 * n3;
+            r = mix(4, 14, c) * br; gg = mix(24, 84, c) * br; b = mix(70, 142, c) * br;
+            var si = sstep(70, 78, a + (coastN - 0.5) * 10);
+            r = mix(r, 226, si); gg = mix(gg, 236, si); b = mix(b, 246, si);
+            isOcean[k] = si > 0.5 ? 0 : 1;
+          }
+          rgb[k * 3] = r; rgb[k * 3 + 1] = gg; rgb[k * 3 + 2] = b;
+
+          var wp = fbm(px * 1.7 + 40, py * 1.7, pz * 1.7, 1) * 1.5;
+          var f = fbm(px * 3 + wp, py * 3.6 + wp * 0.5, pz * 3 - wp, 4);
+          var band = 0.62 + 0.38 * (Math.exp(-Math.pow(latd / 11, 2)) + Math.exp(-Math.pow((a - 52) / 13, 2))) - 0.2 * Math.exp(-Math.pow((a - 26) / 8, 2));
+          cloud[k] = Math.round(235 * sstep(0.46, 0.72, f * band * 1.25));
+        }
+      }
+      if (end < TH) { j0 = end; setTimeout(step, 0); } else { done(); }
+    }
+    step();
+  }
+
+  /* static per-pixel geometry */
+  var S = 560, R = 250, CX = S / 2;
+  var L = [-0.62, 0.28, 0.73];
+  (function () { var n = Math.sqrt(L[0] * L[0] + L[1] * L[1] + L[2] * L[2]); L = [L[0] / n, L[1] / n, L[2] / n]; })();
+  var Hh = [L[0], L[1], L[2] + 1];
+  (function () { var n = Math.sqrt(Hh[0] * Hh[0] + Hh[1] * Hh[1] + Hh[2] * Hh[2]); Hh = [Hh[0] / n, Hh[1] / n, Hh[2] / n]; })();
+  var tilt = 0.32, ca = Math.cos(tilt), sa = Math.sin(tilt);
+
+  var img = ctx.createImageData(S, S);
+  var buf = new Uint32Array(img.data.buffer);
+  var inIdx = new Int32Array(S * S), ang0 = new Float32Array(S * S), rowOff = new Int32Array(S * S);
+  var dif = new Float32Array(S * S), spec = new Float32Array(S * S), rim = new Float32Array(S * S), cov = new Uint8Array(S * S);
+  var cnt = 0;
+
+  (function () {
+    for (var y = 0; y < S; y++) for (var x = 0; x < S; x++) {
+      var dx = (x + 0.5 - CX) / R, dy = -(y + 0.5 - CX) / R, r2 = dx * dx + dy * dy, r = Math.sqrt(r2), idx = y * S + x;
+      if (r >= 1) {
+        if (r < 1.12) {
+          var t = 1 - (r - 1) / 0.12, gl = t * t * t;
+          var side = clamp(0.5 + 0.5 * ((dx * L[0] + dy * L[1]) / r) * 1.4, 0, 1);
+          var al = Math.round(clamp(gl * (0.12 + 0.6 * side), 0, 1) * 255);
+          buf[idx] = (al << 24) | (255 << 16) | (160 << 8) | 90;
+        }
+        continue;
+      }
+      var nz = Math.sqrt(1 - r2);
+      var dd = dx * L[0] + dy * L[1] + nz * L[2];
+      var hh = dx * Hh[0] + dy * Hh[1] + nz * Hh[2];
+      var yp = clamp(dy * ca + nz * sa, -1, 1), zp = -dy * sa + nz * ca;
+      var lat = Math.asin(yp);
+      var j = clamp(Math.floor((0.5 - lat / PI) * TH), 0, TH - 1);
+      var n = cnt++;
+      inIdx[n] = idx; ang0[n] = Math.atan2(dx, zp); rowOff[n] = j * TW;
+      dif[n] = dd; spec[n] = hh > 0 ? Math.pow(hh, 70) : 0; rim[n] = Math.pow(1 - nz, 3);
+      cov[n] = Math.round(clamp((1 - r) * R, 0, 1) * 255);
+    }
+  })();
+
+  function frame(lc, cd) {
+    for (var n = 0; n < cnt; n++) {
+      var u = (ang0[n] + lc) / TAU + 0.5; u -= Math.floor(u);
+      var k = rowOff[n] + ((u * TW) | 0);
+      var uc = u + cd; uc -= Math.floor(uc);
+      var kc = rowOff[n] + ((uc * TW) | 0);
+      var d = dif[n];
+      var t = (d + 0.06) / 0.26; t = t < 0 ? 0 : (t > 1 ? 1 : t);
+      var day = t * t * (3 - 2 * t);
+      var dl = d * 1.5; dl = dl < 0 ? 0 : (dl > 1 ? 1 : dl);
+      var m = day * (0.4 + 0.6 * dl) + 0.035;
+      var r = rgb[k * 3] * m, g = rgb[k * 3 + 1] * m, b = rgb[k * 3 + 2] * m;
+      if (isOcean[k]) { var s = spec[n] * day * 200; r += s * 0.9; g += s * 0.95; b += s; }
+      var cc = cloud[kc] / 255;
+      if (cc > 0) { var cm = m * 1.05; r = r * (1 - cc) + 238 * cm * cc; g = g * (1 - cc) + 242 * cm * cc; b = b * (1 - cc) + 250 * cm * cc; }
+      var li = lights[k];
+      if (li && day < 1) { var f = (1 - day) * li / 255 * (1 - cc * 0.85); r += 255 * f; g += 190 * f; b += 90 * f; }
+      var ad = d < 0 ? -d : d;
+      if (ad < 0.18) { var tw = (1 - ad / 0.18) * (0.25 + cc); r += tw * 36; g += tw * 14; }
+      var at = rim[n] * (0.12 + 0.88 * clamp(d * 1.2 + 0.3, 0, 1));
+      r += 88 * at; g += 165 * at; b += 280 * at;
+      r = r > 255 ? 255 : r; g = g > 255 ? 255 : g; b = b > 255 ? 255 : b;
+      buf[inIdx[n]] = (cov[n] << 24) | ((b | 0) << 16) | ((g | 0) << 8) | (r | 0);
+    }
+    ctx.putImageData(img, 0, 0);
+  }
+
+  /* state and interaction */
+  var lc = 0.35, cd = 0, auto = !reduce, dragging = false, vis = true, raf = 0, lastT = 0, lastDraw = 0, pending = 0;
+
+  function draw() { if (ready) frame(lc, cd); }
+  function schedDraw() { if (pending) return; pending = requestAnimationFrame(function () { pending = 0; draw(); }); }
+
+  function tick(t) {
+    raf = 0;
+    if (!ready || !auto || !vis || document.hidden) { lastT = 0; return; }
+    if (t - lastDraw < 28) { raf = requestAnimationFrame(tick); return; }
+    var dt = lastT ? Math.min(t - lastT, 80) : 16;
+    lastT = t; lastDraw = t;
+    if (!dragging) { lc -= dt * 0.00022; cd += dt * 0.0000035; }
+    draw();
+    raf = requestAnimationFrame(tick);
+  }
+  function loop() { if (!raf && auto && vis && !document.hidden) { lastT = 0; raf = requestAnimationFrame(tick); } }
+
+  function label() {
+    btn.textContent = auto ? 'Pause rotation' : 'Resume rotation';
+    btn.setAttribute('aria-pressed', auto ? 'false' : 'true');
+  }
+  btn.addEventListener('click', function () { auto = !auto; label(); if (auto) loop(); });
+  label();
+
+  var lastX = 0;
+  cv.addEventListener('pointerdown', function (e) {
+    dragging = true; lastX = e.clientX;
+    try { cv.setPointerCapture(e.pointerId); } catch (err) {}
+  });
+  cv.addEventListener('pointermove', function (e) {
+    if (!dragging) return;
+    var rc = cv.getBoundingClientRect();
+    var rcss = rc.width * R / S;
+    lc -= (e.clientX - lastX) / rcss; lastX = e.clientX;
+    schedDraw();
+  });
+  function endDrag() { dragging = false; }
+  cv.addEventListener('pointerup', endDrag);
+  cv.addEventListener('pointercancel', endDrag);
+  cv.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowLeft') { lc += 0.15; schedDraw(); e.preventDefault(); }
+    else if (e.key === 'ArrowRight') { lc -= 0.15; schedDraw(); e.preventDefault(); }
+  });
+
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver(function (en) { vis = en[0].isIntersecting; if (vis) { loop(); schedDraw(); } }).observe(cv);
+  }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) loop(); });
+
+  setTimeout(function () {
+    buildTextures(function () {
+      ready = true;
+      draw();
+      cv.classList.add('on');
+      loop();
+    });
+  }, 30);
+})();
+</script>
+
+</body>
+</html>
